@@ -109,6 +109,8 @@ public class MainActivity extends AppCompatActivity {
                     bitmap.compress(Bitmap.CompressFormat.JPEG, 100,byteArrayOutputStream);
                     byte[] bytes = byteArrayOutputStream.toByteArray();
                     final String base64Image = Base64.encodeToString(bytes, Base64.DEFAULT);
+                    final String Confidence = confidence.getText().toString();
+                    final String Result = result.getText().toString();
                     RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
                     String url ="http://192.168.18.243/upload-android-image/upload.php";
 
@@ -133,7 +135,8 @@ public class MainActivity extends AppCompatActivity {
                         protected Map<String, String> getParams(){
                             Map<String, String> paramV = new HashMap<>();
                             paramV.put("image", base64Image);
-                            paramV.put("confidence", String.valueOf(maxConfidence * 100));
+                            paramV.put("confidence", Confidence);
+                            paramV.put("result", Result);
                             return paramV;
                         }
                     };
@@ -150,18 +153,18 @@ public class MainActivity extends AppCompatActivity {
 
             // Creates inputs for reference.
             TensorBuffer inputFeature0 = TensorBuffer.createFixedSize(new int[]{1, 224, 224, 3}, DataType.FLOAT32);
-            ByteBuffer byteBuffer = ByteBuffer.allocateDirect(4*imageSize*imageSize*3);
+            ByteBuffer byteBuffer = ByteBuffer.allocateDirect(4 * imageSize * imageSize * 3);
             byteBuffer.order(ByteOrder.nativeOrder());
 
-            int [] intValues = new int[imageSize*imageSize];
-            image.getPixels(intValues,0,image.getWidth(),0,0,image.getWidth(),image.getHeight());
+            int[] intValues = new int[imageSize * imageSize];
+            image.getPixels(intValues, 0, image.getWidth(), 0, 0, image.getWidth(), image.getHeight());
             int pixel = 0;
-            for(int i = 0; i < imageSize; i++){
-                for(int j = 0; j < imageSize; j++){
+            for (int i = 0; i < imageSize; i++) {
+                for (int j = 0; j < imageSize; j++) {
                     int val = intValues[pixel++]; // RGB
-                    byteBuffer.putFloat(((val >> 16) & 0xFF)*(1.f/255.f));
-                    byteBuffer.putFloat(((val >> 8) & 0xFF)*(1.f/255.f));
-                    byteBuffer.putFloat((val & 0xFF)*(1.f/255.f));
+                    byteBuffer.putFloat(((val >> 16) & 0xFF) * (1.f / 255.f));
+                    byteBuffer.putFloat(((val >> 8) & 0xFF) * (1.f / 255.f));
+                    byteBuffer.putFloat((val & 0xFF) * (1.f / 255.f));
                 }
             }
 
@@ -174,8 +177,8 @@ public class MainActivity extends AppCompatActivity {
             float[] confidences = outputFeature0.getFloatArray();
             int maxPos = 0;
             float maxConfidence = 0;
-            for(int i = 0; i < confidences.length; i++){
-                if(confidences[i] > maxConfidence){
+            for (int i = 0; i < confidences.length; i++) {
+                if (confidences[i] > maxConfidence) {
                     maxConfidence = confidences[i];
                     maxPos = i;
                 }
@@ -183,17 +186,19 @@ public class MainActivity extends AppCompatActivity {
 
             String[] classes = {"Oblong", "Heart", "Square", "Oval", "Round"};
 
+            // Set the result TextView to display the class name
             result.setText(classes[maxPos]);
 
-            String confidenceText = String.format("%s: %.1f%%", classes[maxPos], maxConfidence * 100);
-            confidence.setText(confidenceText);
+            // Set the confidence TextView to display only the confidence percentage
+            confidence.setText(String.format("%.1f%%", maxConfidence * 100));
 
             // Releases model resources if no longer used.
             model.close();
         } catch (IOException e) {
-            // TODO Handle the exception
+            e.printStackTrace();
         }
     }
+
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
